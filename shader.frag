@@ -20,7 +20,7 @@ uniform float iTime;
 #define MAT_FRACTAL 1
 #define MAT_OCEAN 2
 
-
+// mandelbulb sdf from: http://blog.hvidtfeldts.net/index.php/2011/09/distance-estimated-3d-fractals-v-the-mandelbulb-different-de-approximations/
 float mandelbulbSDF(vec3 p) {
     const int ITERATIONS = 200;
     const float BAILOUT = 2.0;
