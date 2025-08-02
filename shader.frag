@@ -13,6 +13,7 @@ uniform int u_fractalType;
 uniform float u_power;
 uniform float iTime;
 
+// Constants for raymarcher
 #define MAX_STEPS 256
 #define MAX_DISTANCE 700.0
 #define SURFACE_DIST 0.0005
@@ -20,7 +21,10 @@ uniform float iTime;
 #define MAT_FRACTAL 1
 #define MAT_OCEAN 2
 
-// mandelbulb sdf from: http://blog.hvidtfeldts.net/index.php/2011/09/distance-estimated-3d-fractals-v-the-mandelbulb-different-de-approximations/
+/**
+* mandelbulb sdf from: http://blog.hvidtfeldts.net/index.php/2011/09/distance-estimated-3d-fractals-v-the-mandelbulb-different-de-approximations/
+* @param p The 3d position
+*/
 float mandelbulbSDF(vec3 p) {
     const int ITERATIONS = 200;
     const float BAILOUT = 2.0;
@@ -41,7 +45,7 @@ float mandelbulbSDF(vec3 p) {
 
         dr = pow(r, POWER - 1.0) * POWER * dr + 1.0;
 
-        // Scale and rotate the point
+        // Scale and rotate
         float sinTheta = sin(theta * POWER);
         float cosTheta = cos(theta * POWER);
         float sinPhi = sin(phi * POWER);
@@ -57,6 +61,11 @@ float mandelbulbSDF(vec3 p) {
     return 0.5 * log(r) * r / dr;
 }
 
+/**
+* @param p The 3d position
+* @param c Julia constant
+* @param power Exponent for each iteration
+*/
 float juliaSDF(vec3 p, vec3 c, float power) {
     const int ITERATIONS = 8;
     const float BAILOUT = 4.0;
@@ -69,7 +78,6 @@ float juliaSDF(vec3 p, vec3 c, float power) {
         r = length(z);
         if (r > BAILOUT) break;
 
-        // Spherical coordinates
         float theta = acos(z.z / r);
         float phi = atan(z.y, z.x);
         float zr = pow(r, power);
@@ -86,6 +94,13 @@ float juliaSDF(vec3 p, vec3 c, float power) {
     return 0.5 * log(r) * r / dr;
 }
 
+/**
+* Ocean SDF
+* function(direction * scaled frequency + speed) * hight
+* 
+* @param p The 3d position
+* @return Distance to the ocean surface. -1.5 is the height of the ocean. waveHeight is the actual height of the wave.
+*/
 float ocean(vec3 p) {
     float wave1 = sin(p.x * 0.4 + iTime * 1.0) * 0.15;
     float wave2 = cos(p.z * 0.6 + iTime * 1.2) * 0.12;
@@ -97,6 +112,9 @@ float ocean(vec3 p) {
     return p.y - (-1.5 + waveHeight);
 }
 
+/**
+* Returns the smallest disance to the scene
+*/
 float sceneSDF(vec3 p, out int materialID) {
     float dFractal;
     if (u_fractalType == 0) {
@@ -106,8 +124,11 @@ float sceneSDF(vec3 p, out int materialID) {
         dFractal = juliaSDF(p, juliaC, u_power);
     }
 
+    // Distance to ocean surface
     float dOcean = ocean(p);
 
+    // return distance from nearest object. Eather ocean or fractal.
+    // sets the correstponding material id.
     if (dFractal < dOcean) {
         materialID = MAT_FRACTAL;
         return dFractal;
@@ -117,23 +138,33 @@ float sceneSDF(vec3 p, out int materialID) {
     }
 }
 
+/**
+* Raymarching function
+* @param ro The ray origin
+* @param rd The ay direction
+* @param steps How many steps were made
+* @param materialID Which material was hit
+*/
 float rayMarch(vec3 ro, vec3 rd, out int steps, out int materialID) {
     float totalDist = 0.0;
     for (int i = 0; i < MAX_STEPS; i++) {
         vec3 p = ro + rd * totalDist;
-        float d = sceneSDF(p, materialID);
-        if (d < SURFACE_DIST) {
+        float distance = sceneSDF(p, materialID);   // distance to next object
+        if (distance < SURFACE_DIST) {
             steps = i;
             return totalDist;
         }
-        if (totalDist > MAX_DISTANCE) break;
-        totalDist += d;
+        if (totalDist > MAX_DISTANCE) break;    // exit when distance is to large
+        totalDist += distance;  // march ray
     }
-    steps = MAX_STEPS;
+    steps = MAX_STEPS;  // if no object was hit
     materialID = -1;
     return -1.0;
 }
 
+/**
+* @param uv screen corrdinates
+*/
 vec3 getRayDirection(vec2 uv, mat4 invProj, mat4 invView) {
     vec4 clip = vec4(uv * 2.0 - 1.0, -1.0, 1.0);
     vec4 eye = invProj * clip;
@@ -142,11 +173,17 @@ vec3 getRayDirection(vec2 uv, mat4 invProj, mat4 invView) {
     return normalize(world.xyz);
 }
 
+/**
+* Only returns distance to scene, without material.
+*/
 float sceneOnlyDistance(vec3 p) {
     int unusedMaterialID;
     return sceneSDF(p, unusedMaterialID);
 }
 
+/**
+* calculates the normal vector at @param p
+*/
 vec3 getNormal(vec3 p) {
     float d = sceneOnlyDistance(p);
     vec2 e = vec2(0.001, 0.0);
@@ -182,6 +219,7 @@ void main() {
         vec3 baseColor;
 
         if (materialID == MAT_FRACTAL) {
+            // Gradient based on the needed steps
             vec3 col1 = vec3(0.05, 0.0, 0.1);
             vec3 col2 = vec3(0.1, 0.3, 0.25);
             vec3 col3 = vec3(0.3, 0.5, 0.8);
@@ -215,6 +253,7 @@ void main() {
             outColor = vec4(pow(litColor, vec3(1.0 / 2.2)), 1.0);
         }
     } else {
+        // If no object got hit
 	    // background
         float sunGradient = clamp(rayDir.y * 0.5 + 0.5, 0.0, 1.0);
         vec3 skyColor = mix(skyColorBottom, skyColorTop, pow(sunGradient, 1.5));
