@@ -1,16 +1,25 @@
-# Fractal View
-## About the project
-This is my final project for the computer graphics lecture. It uses the provided template.
+# FractalView
 
-I implemented a raymarching engine for displaying the mandelbulb and a set of julia fractals. There is an option to export the viewport as png. You also have the option to change between five different performance settings. The performance settings controll the renderresolution of the canvas. That means, that they also controll the resolution of the exported png.
+## About the project
+This is my final project for the computer graphics lecture. It is based on the provided template.
+
+The application supports visualizing both the **Mandelbulb** and **Julia fractals**. Additional features include:
+
+- Camera navigation (orbit and zoom)
+- Adjustable fractal power
+- Orbit animation
+- Export of the viewport as png
+- Four performance levels, affecting canvas resolution and export quality
 
 ## How to use it
-Start the index.html on a server.
+Start the index.html on a server. I tested the applocation using the Live Server extension for VS Code.
+
+[▶️ Demo video](fractal_view_demo.mp4)
 
 ## Resources
 Links are also present as comments in the code.
 
-Generall:
+General:
 - https://de.wikipedia.org/wiki/Quaternion
 - https://de.wikipedia.org/wiki/Kugelkoordinaten
 
